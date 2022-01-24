@@ -1,6 +1,6 @@
 const BlogsModel = require("../models/Blogs_Model")
 const AuthorModel = require("../models/Author_Model")
-const mongoose = require("mongoose")
+
 
 const createBlogs = async function (req, res) {
     try {
@@ -22,27 +22,24 @@ const createBlogs = async function (req, res) {
 }
 
 
+
+
+
 const getBlogs = async function (req, res) {
     try {
-
-        let info = req.query
-        let data = await BlogsModel.findOne(info)
-        if (data) {
-            if (data.isDeleted == false && data.isPublished == true) {
-                res.status(200).send({ Status: "Success", Info: data })
-
-
-            } else {
-                res.status(500).send({ err: "either book isn't published or data is deleted" })
-            }
-        } else {
-            res.status(404).send({ err: "please provide valid Query Params in Postman" })
+        let body = req.query;
+        body.isDeleted = false;
+        body.isPublished = true;
+        let foundBlogs = await BlogsModel.find(body);
+        if (foundBlogs) {
+            res.status(200).send({ status: true, data: foundBlogs });
         }
-
+        else {
+            res.status(404).send({ status: false, msg: "No documents found" });
+        }
     }
     catch (err) {
-        console.log(err.message)
-        res.status(500).send({ msg: "Something went wrong" })
+        res.status(500).send({ msg: "Some error occured" });
     }
 }
 
@@ -88,7 +85,10 @@ const update = async function (req, res) {
 const DeleteBlogs = async function (req, res) {
     try {
         let decodedUserToken = req.user
-        let BlogUser = await BlogsModel.findOne({ _id: req.params.deleteId })
+        let BlogUser = await BlogsModel.findOne({ _id: req.params.deleteId, isDeleted: false })
+        if(!BlogUser){
+            res.status(404).send({status:false,message:"Blog is not exist"})
+        }
         //userid is equals to author id. for reference see the token genereation api.
         if (decodedUserToken.userId == BlogUser.authorId) {
 
@@ -107,6 +107,7 @@ const DeleteBlogs = async function (req, res) {
     }
 }
 
+
 const DeleteBlogsbyQuery = async function (req, res) {
     try {
    
@@ -119,7 +120,7 @@ const DeleteBlogsbyQuery = async function (req, res) {
             let tempdata = await BlogsModel.findOneAndUpdate({ id: BlogUser._id, isDeleted: false }, { isDeleted: true, deletedAt: Date() })
             if (BlogUser) {
 
-                res.status(200).send()
+                res.status(200).send({status:true})
             } else {
                 res.status(404).send({ err: "data might have been already deleted" })
             }
@@ -131,6 +132,7 @@ const DeleteBlogsbyQuery = async function (req, res) {
         res.status(500).send({ status: false, message: err.message })
     }
 }
+
 
 module.exports.createBlogs = createBlogs
 module.exports.DeleteBlogs = DeleteBlogs
